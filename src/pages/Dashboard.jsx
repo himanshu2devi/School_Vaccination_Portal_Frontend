@@ -4,7 +4,6 @@ import api_for_studentService from '../Servicesimpl/api_for_studentService';
 import api_for_driveService from '../Servicesimpl/api_for_driveService';
 import '../Styling/Styling.css';
 
-
 const Dashboard = ({ setLoggedIn }) => {
   const [studentCount, setStudentCount] = useState(0);
   const [vaccinatedCount, setVaccinatedCount] = useState(0);
@@ -25,7 +24,8 @@ const Dashboard = ({ setLoggedIn }) => {
 
       setStudentCount(studentRes.data);
       setVaccinatedCount(vaccinatedRes.data);
-      setUpcomingDrives(driveRes.data);
+      const approvedDrives = driveRes.data.filter(d => d.status === 'APPROVED');
+      setUpcomingDrives(approvedDrives);
     } catch (err) {
       console.error("Error loading dashboard data:", err);
     }
@@ -48,20 +48,19 @@ const Dashboard = ({ setLoggedIn }) => {
     <div className="dashboard-wrapper">
       <div className="top-bar">
         <div className='title1'>
-        <h2>Vaccination Dashboard</h2>
-        <div className="welcome-message">
-  <h3>Welcome,{username}!!!</h3>
-</div>
-<div className="action-buttons">
-        <button onClick={() => handleNavigate('/students')}>Manage Students</button>
-        <button onClick={() => handleNavigate('/drives')}>Manage Drives</button>
-        <button onClick={() => handleNavigate('/report')}>Generate Reports</button>
-      </div>
-
+          <h2>Vaccination Dashboard</h2>
+          <div className="welcome-message">
+            <h3>Welcome, {username}!!!</h3>
+          </div>
+          <div className="action-buttons">
+            <button onClick={() => handleNavigate('/students')}>Manage Students</button>
+            <button onClick={() => handleNavigate('/drives')}>Manage Drives</button>
+            <button onClick={() => handleNavigate('/report')}>Generate Reports</button>
+          </div>
         </div>
         <div className='right-items'>
-        <button onClick={handleLogout} className="logout-btn">Logout</button>
-        <div className="username-display">👤 {username}</div>
+          <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <div className="username-display">👤 {username}</div>
         </div>
       </div>
 
@@ -84,23 +83,26 @@ const Dashboard = ({ setLoggedIn }) => {
       </div>
 
       <div className="upcoming-section">
-        <h2>Upcoming Vaccination Drives (within the next 30 days) :</h2>
+        <h2>Upcoming Vaccination Drives (APPROVED only, next 30 days):</h2>
         {upcomingDrives.length > 0 ? (
           <ul className="drive-list">
             {upcomingDrives.map((drive, index) => (
-  <li key={index} className="drive-item">
-    <div>
-    <strong style={{ marginRight: '10px' }}>💉 {drive.vaccineName}</strong> <br />
-<strong style={{ marginRight: '10px' }}>class:</strong> {drive.className} <span style={{ margin: '0 10px' }}>|</span> <strong style={{ marginRight: '10px' }}>Date:</strong> {drive.date} <span style={{ margin: '0 10px' }}>|</span> <strong>Avaialble Doses:</strong> {drive.dosesRequired}    </div>
-  </li>
-))}
+              <li key={index} className="drive-item">
+                <div>
+                  <strong style={{ marginRight: '10px' }}>💉 {drive.vaccineName}</strong> <br />
+                  <strong style={{ marginRight: '10px' }}>Class:</strong> {drive.className}
+                  <span style={{ margin: '0 10px' }}>|</span>
+                  <strong style={{ marginRight: '10px' }}>Date:</strong> {drive.date}
+                  <span style={{ margin: '0 10px' }}>|</span>
+                  <strong>Available Doses:</strong> {drive.dosesRequired}
+                </div>
+              </li>
+            ))}
           </ul>
         ) : (
-          <p>No upcoming drives scheduled.</p>
+          <p>No approved upcoming drives scheduled.</p>
         )}
       </div>
-
-      
     </div>
   );
 };
