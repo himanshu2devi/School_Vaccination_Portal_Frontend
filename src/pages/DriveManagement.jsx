@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { getDrives, addDrive, updateDrive,deleteDrive } from '../Servicesimpl/driverServiceImpl';
-import { Link, useNavigate } from 'react-router-dom';
+import { getDrives, addDrive, updateDrive, deleteDrive } from '../Servicesimpl/driverServiceImpl';
+import { useNavigate } from 'react-router-dom';
 import '../Styling/Styling.css';
 import Swal from 'sweetalert2';
 
@@ -15,8 +15,7 @@ const DriveManagementPage = () => {
   });
 
   const username = localStorage.getItem('username');
-
-
+  const role = localStorage.getItem('role');
   const [editing, setEditing] = useState(false);
   const navigate = useNavigate();
 
@@ -49,7 +48,7 @@ const DriveManagementPage = () => {
       confirmButtonText: 'Yes, delete it!',
       cancelButtonText: 'Cancel'
     });
-  
+
     if (confirm.isConfirmed) {
       try {
         await deleteDrive(id);
@@ -75,21 +74,11 @@ const DriveManagementPage = () => {
 
     try {
       if (editing) {
-        await updateDrive(form.id, form);
-        Swal.fire({
-          title: 'Success!',
-          text: 'Drive updated successfully!',
-          icon: 'success',
-          confirmButtonText: 'Okay'
-        });
+        await updateDrive(form.id, form, username); 
+        Swal.fire('Success!', 'Drive updated successfully!', 'success');
       } else {
         await addDrive(form);
-        Swal.fire({
-          title: 'Success!',
-          text: 'Drive scheduled successfully!',
-          icon: 'success',
-          confirmButtonText: 'Okay'
-        });
+        Swal.fire('Success!', 'Drive scheduled successfully! subject to approval from admin', 'success');
       }
 
       setForm({ id: null, vaccineName: '', className: '', date: '', dosesRequired: 1 });
@@ -97,12 +86,7 @@ const DriveManagementPage = () => {
       loadDrives();
     } catch (err) {
       const message = err?.response?.data;
-      Swal.fire({
-        title: 'Oops!',
-        text: typeof message === 'string' ? message : "Failed to process drive.",
-        icon: 'error',
-        confirmButtonText: 'Okay'
-      });
+      Swal.fire('Oops!', typeof message === 'string' ? message : 'Failed to process drive.', 'error');
     }
   };
 
@@ -110,17 +94,29 @@ const DriveManagementPage = () => {
     const driveDate = new Date(drive.date);
     const today = new Date();
     if (driveDate < today) {
-      Swal.fire({
-        title: 'Error!',
-        text: 'Cannot edit a past drive.',
-        icon: 'error',
-        confirmButtonText: 'Try Again'
-      });
+      Swal.fire('Error!', 'Cannot edit a past drive.', 'error');
       return;
     }
 
     setForm({ ...drive });
     setEditing(true);
+  };
+
+  const handleApprove = async (id) => {
+    try {
+      const driveToApprove = drives.find((d) => d.id === id);
+      const approvedDrive = {
+        ...driveToApprove,
+        status: 'APPROVED'
+      };
+
+      await updateDrive(id, approvedDrive, username); 
+      Swal.fire('Success!', 'Drive approved successfully!', 'success');
+      loadDrives();
+    } catch (err) {
+      const message = err?.response?.data;
+      Swal.fire('Error!', typeof message === 'string' ? message : 'Failed to approve drive.', 'error');
+    }
   };
 
   return (
@@ -129,9 +125,9 @@ const DriveManagementPage = () => {
         <h2 className="title">Drive Management</h2>
         <div className="right-items">
           <button className="dashboard-btn" onClick={() => navigate('/dashboard')}>
-          Dashboard
+            Dashboard
           </button>
-          <div className="username-display">👤 {username}</div>
+          <div className="username-display">👤 {username} ({role})</div>
         </div>
       </div>
 
@@ -187,6 +183,7 @@ const DriveManagementPage = () => {
               <th>Class</th>
               <th>Date</th>
               <th>No. of Doses</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -200,37 +197,50 @@ const DriveManagementPage = () => {
                   <td>{drive.className}</td>
                   <td>{drive.date}</td>
                   <td>{drive.dosesRequired}</td>
+                  <td>{drive.status}</td>
                   <td>
                     <button
                       onClick={() => handleEdit(drive)}
                       disabled={isPast}
-                      title={isPast ? "Drive completed" : "Edit drive"}
                       style={{
                         backgroundColor: isPast ? '#ccc' : '#4a90e2',
                         color: 'white',
                         padding: '6px 10px',
                         border: 'none',
                         borderRadius: '4px',
-                        cursor: isPast ? 'not-allowed' : 'pointer'
+                        cursor: isPast ? 'not-allowed' : 'pointer',
+                        marginRight: '5px'
                       }}
                     >
                       Edit
                     </button>
                     <button
-  onClick={() => handleDelete(drive.id)}
-  style={{
-    backgroundColor: '#e74c3c',
-    color: 'white',
-    padding: '6px 10px',
-    border: 'none',
-    borderRadius: '4px',
-    marginLeft: '8px',
-    cursor: 'pointer'
-  }}
->
-  Delete
-</button>
-                    
+                      onClick={() => handleDelete(drive.id)}
+                      style={{
+                        backgroundColor: '#e74c3c',
+                        color: 'white',
+                        padding: '6px 10px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        marginRight: '5px'
+                      }}
+                    >
+                      Delete
+                    </button>
+                    {role === 'ADMIN' && drive.status === 'PENDING' && (
+                      <button
+                        onClick={() => handleApprove(drive.id)}
+                        style={{
+                          backgroundColor: '#2ecc71',
+                          color: 'white',
+                          padding: '6px 10px',
+                          border: 'none',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        Approve
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
