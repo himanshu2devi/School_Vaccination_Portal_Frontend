@@ -170,35 +170,39 @@ const StudentsPage = () => {
   };
 
   const handleVaccinate = async (id) => {
-    const { value: formValues } = await Swal.fire({
-      title: 'Mark as Vaccinated',
-      html:
-        '<input id="swal-vaccine" class="swal2-input" placeholder="Vaccine name">' +
-        '<input id="swal-date" type="date" class="swal2-input">',
-      focusConfirm: false,
-      showCancelButton: true,
-      confirmButtonText: 'Submit',
-      preConfirm: () => {
-        const vaccine = document.getElementById('swal-vaccine').value;
-        const date = document.getElementById('swal-date').value;
-
-        if (!vaccine || !date) {
-          Swal.showValidationMessage('Please enter both vaccine name and date');
-          return;
+    try {
+      const res = await api_for_studentService.get('http://localhost:8083/drives');
+      const drives = res.data;
+  
+      const optionsHtml = drives.map(
+        (d) =>
+          `<option value="${d.vaccineName}|${d.date}">${d.vaccineName} - ${d.date}</option>`
+      ).join('');
+  
+      const { value: selected } = await Swal.fire({
+        title: 'Mark as Vaccinated',
+        html: `<select id="swal-vaccine-select" class="swal2-select">${optionsHtml}</select>`,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Submit',
+        preConfirm: () => {
+          const value = document.getElementById('swal-vaccine-select').value;
+          if (!value) {
+            Swal.showValidationMessage('Please select a vaccine');
+            return;
+          }
+          const [vaccine, date] = value.split('|');
+          return { vaccine, date };
         }
-
-        return { vaccine, date };
-      }
-    });
-
-    if (formValues) {
-      try {
-        await markVaccinated(id, formValues.vaccine, formValues.date);
+      });
+  
+      if (selected) {
+        await markVaccinated(id, selected.vaccine, selected.date);
         Swal.fire('Success!', 'Student marked as vaccinated.', 'success');
         loadStudents();
-      } catch (error) {
-        Swal.fire('Error', 'Failed to mark vaccination.', 'error');
       }
+    } catch (error) {
+      Swal.fire('Error', 'Failed to mark vaccination.', 'error');
     }
   };
 
